@@ -10,11 +10,23 @@ import {
 } from "@/components/ui/card";
 import { Plus } from "lucide-react";
 import { db, Student } from "@/lib/database";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export function Students() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [openModal, setOpenModal] = useState(false);
 
   useEffect(() => {
     loadStudents();
@@ -30,6 +42,25 @@ export function Students() {
       setError("Failed to load students");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const confirmDelete = (student: Student) => {
+    setSelectedStudent(student);
+    setOpenModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (selectedStudent) {
+      try {
+        await db.students.delete(selectedStudent.id);
+        setOpenModal(false);
+        setSelectedStudent(null);
+        await loadStudents();
+      } catch (err) {
+        console.error("Failed to delete student:", err);
+        alert("Failed to delete student.");
+      }
     }
   };
 
@@ -92,12 +123,13 @@ export function Students() {
                       {student.section}
                     </div>
                   </div>
-                  <div className="space-x-2">
-                    <Button variant="outline" size="sm">
-                      View
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Edit
+                  <div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => confirmDelete(student)}
+                    >
+                      Delete
                     </Button>
                   </div>
                 </div>
@@ -106,6 +138,24 @@ export function Students() {
           )}
         </CardContent>
       </Card>
+
+      {/* Confirmation Modal */}
+      <AlertDialog open={openModal} onOpenChange={setOpenModal}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Are you sure you want to delete{" "}
+              <span className="font-bold">{selectedStudent?.name}</span>?
+            </AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedStudent(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
